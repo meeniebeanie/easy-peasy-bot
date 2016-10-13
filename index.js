@@ -90,8 +90,14 @@ controller.on('bot_channel_join', function (bot, message) {
 });
 
 controller.hears(['hello', 'hey'], 'direct_message', function (bot, message) {
-    console.log('ayee');
-    bot.reply(message, 'What\'s up!✨');
+    var greeting = [
+      'byte me',
+      'string me_along',
+      'There are 10 kinds of people in the world: those who understand binary, and those who don\'t.',
+      'bugs are mother of glitches',
+      'real programmers count from 0',
+    ]
+    bot.reply(message, greeting[Math.floor(Math.random()*greeting.length)]);
 });
 
 controller.hears(['call me (.*)', 'my name is (.*)'], 'direct_message', function(bot, message) {
