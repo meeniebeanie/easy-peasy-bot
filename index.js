@@ -2,6 +2,8 @@
  * A Bot for Slack!
  */
 
+var Botkit = require('botkit');
+
 
 /**
  * Define a function for initiating a conversation on installation
@@ -81,13 +83,168 @@ controller.on('rtm_close', function (bot) {
  */
 // BEGIN EDITING HERE!
 
+//
+
 controller.on('bot_channel_join', function (bot, message) {
     bot.reply(message, "I'm here! ✨✨✨")
 });
 
-controller.hears(['hello', 'hi', 'hey'], 'direct_message', function (bot, message) {
+controller.hears(['hello', 'hey'], 'direct_message', function (bot, message) {
+    console.log('ayee');
     bot.reply(message, 'What\'s up!✨');
 });
+
+controller.hears(['call me (.*)', 'my name is (.*)'], 'direct_message', function(bot, message) {
+    var name = message.match[1];
+    controller.storage.users.get(message.user, function(err, user) {
+        if (!user) {
+            user = {
+                id: message.user,
+            };
+        }
+        user.name = name;
+        controller.storage.users.save(user, function(err, id) {
+            bot.reply(message, 'Got it. I will call you ' + user.name + ' from now on.');
+        });
+    });
+});
+
+controller.hears('what is my name?', 'direct_message', function (bot, message) {
+    controller.storage.users.get(message.user, function(err,user) {
+      if (user && user.name) {
+        bot.reply(message, 'Your name is ' + user.name);
+      } else {
+        bot.startConversation(message,function(err, convo) {
+          if (!err) {
+            convo.say('You haven\'t told me your name!');
+            convo.ask('What is your name?',
+            function(response, convo) {
+              convo.ask('You want me to call you `' + response.text + '`?', [
+                {
+                  pattern: 'yes',
+                  callback: function(response, convo) {
+                    convo.next();
+                  }
+                },
+                {
+                  pattern: 'no',
+                  callback: function(response, convo) {
+                    convo.stop();
+                  }
+                },
+                {
+                  default: true,
+                  callback: function(response, convo) {
+                    convo.repeat();
+                    convo.next();
+                  }
+                }
+              ]);
+              convo.next();
+            }, {'key': 'nickname'});
+
+            convo.on('end', function(convo) {
+              if (convo.status == 'completed') {
+                bot.reply(message, 'Alright! I\'m updating my dossier...');
+                controller.storage.users.get(message.user, function(err, user){
+                  if (!user) {
+                    user = {
+                      id: message.user,
+                    };
+                  }
+                  user.name = convo.extractResponse('nickname');
+                                controller.storage.users.save(user, function(err, id) {
+                                    bot.reply(message, 'Got it. I will call you ' + user.name + ' from now on.');
+                                });
+                })
+              }
+            })
+          }
+          else {
+          bot.reply(message, 'OK, nevermind!');
+          }
+        });
+      }
+    });
+});
+
+controller.hears(['shit','knnbccb','bullshit','damn','fuck'], 'direct_message', function (bot, message) {
+  var swearjar = {};
+
+    controller.storage.users.get(swearjar.user, function(err, swearjar) {
+      if (!swearjar) {
+        swearjar = {
+          counter: 0,
+        };
+      } else {
+        swearjar.counter++;
+      }
+
+      controller.storage.users.save(swearjar, function(err, counter){
+        bot.reply(message, '+1 to the swear jarrr. Current swearjar count is ' + swearjar.counter );
+      });
+    });
+});
+
+// KOPI ORDERING!
+
+// controller.hears(['order drinks','kopi time'],['ambient'],function(bot,message) {
+//   bot.startConversation(message, askDrink);
+// });
+//
+// askDrink = function(response, convo) {
+//   convo.ask("What drink do you want?", function(response, convo) {
+//     convo.say("Okay! So you want (.*)")
+//   })
+// }
+
+controller.hears('kopi time','direct_message,direct_mention',function(bot,message) {
+  var reply_with_attachments = {
+    "text": "What drink would you like?",
+    "attachments": [
+        {
+            "text": "What do you wanna drink?",
+            "fallback": "You are unable to order",
+            "callback_id": "order_drink",
+            "color": "#3AA3E3",
+            "attachment_type": "default",
+            "actions": [
+                {
+                    "name": "Kopi",
+                    "text": "Kopi",
+                    "type": "button",
+                    "value": "kopi"
+                },
+                {
+                    "name": "Teh",
+                    "text": "Teh",
+                    "type": "button",
+                    "value": "teh"
+                },
+                {
+                    "name": "Milo",
+                    "text": "Milo",
+                    "type": "button",
+                    "value": "milo",
+                }
+            ]
+        }
+    ]
+}
+
+  bot.reply(message, reply_with_attachments);
+});
+
+controller.hears('open the (.*) doors','direct_message,direct_mention,mention',function(bot,message) {
+  var doorType = message.match[1]; //match[1] is the (.*) group. match[0] is the entire group (open the (.*) doors).
+  if (doorType === 'pod bay') {
+    return bot.reply(message, 'I\'m sorry, Dave. I\'m afraid I can\'t do that.');
+  }
+  return bot.reply(message, 'Okay');
+});
+
+
+
 
 /**
  * AN example of what could be:
